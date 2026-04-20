@@ -15,7 +15,17 @@ const TOOLS = [
 ];
 
 async function main(): Promise<void> {
-  // `init` subcommand wiring is added in Task 12, not here.
+  if (process.argv[2] === 'init') {
+    const { runInitCommand } = await import('./bootstrap/init-command.js');
+    const originUrl = process.argv[3] ?? 'https://change-me.example.com';
+    const targetUrl = process.argv[4] ?? 'http://localhost:3000';
+    runInitCommand({ cwd: process.cwd(), originUrl, targetUrl });
+    console.log('page-to-page initialized:');
+    console.log('  page-to-page.config.json — edit to configure');
+    console.log('  .mcp.json                 — server registered for Claude Code');
+    console.log('  .gitignore                — artifacts + state backup ignored');
+    process.exit(0);
+  }
 
   const handler = createServer();
   const server = new Server({ name: 'page-to-page', version: '0.1.0' }, { capabilities: { tools: {} } });
