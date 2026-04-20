@@ -1,0 +1,17 @@
+{
+  "name": "@noders/page-to-page",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "page-to-page-mcp": "./bin/page-to-page-mcp",
+    "page-to-page": "./bin/page-to-page"
+  },
+  "scripts": { "build": "tsc -b" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@noders/page-to-page-core": "*",
+    "zod": "^3.23.0"
+  },
+  "files": ["dist", "bin"]
+}

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+coverage/
+page-to-page-artifacts/
+page-to-page.state.json.bak
+.env
+.env.local
