@@ -4,3 +4,6 @@ export type { Config } from './config/schema.js';
 export { StateStore } from './state/store.js';
 export type { StateFile, StatePage } from './state/schema.js';
 export { discoverPages, fetchSitemapPaths, crawlPaths } from './discovery/index.js';
+export { PageCapturer } from './capture/capturer.js';
+export type { CaptureInput, CaptureResult, CaptureViewportResult } from './capture/capturer.js';
+export { resolveViewports } from './capture/viewport.js';
