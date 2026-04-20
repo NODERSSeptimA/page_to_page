@@ -57,4 +57,18 @@ describe('MCP tools', () => {
       await expect(srv.call('verify_current', {})).rejects.toThrow(/no page in progress/i);
     } finally { await srv.close(); }
   }, 30_000);
+
+  it('mark_has_issues transitions page to has_issues', async () => {
+    const srv = createServer();
+    try {
+      await srv.call('init_migration', { configPath: cfgPath });
+      const np = await srv.call('next_page', {});
+      expect(np.path).toBeDefined();
+      await srv.call('diff_current', {});
+      const result = await srv.call('mark_has_issues', { note: 'font mismatch needs design team' });
+      expect(result.pagesRemaining).toBeGreaterThanOrEqual(0);
+      const st = await srv.call('status', {});
+      expect(st.hasIssues).toBe(1);
+    } finally { await srv.close(); }
+  }, 180_000);
 });

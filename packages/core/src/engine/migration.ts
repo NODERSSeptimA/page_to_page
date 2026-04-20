@@ -153,6 +153,13 @@ export class MigrationEngine {
     this.store.setCurrent(undefined);
   }
 
+  markHasIssues(note?: string): void {
+    const current = this.currentPath();
+    if (!current) throw new Error('No page in progress.');
+    this.store.updatePage(current, { status: 'has_issues', skipReason: note });
+    this.store.setCurrent(undefined);
+  }
+
   skipCurrent(reason: string): void {
     const current = this.currentPath();
     if (!current) throw new Error('No page in progress.');

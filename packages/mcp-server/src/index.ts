@@ -10,6 +10,7 @@ const TOOLS = [
   { name: 'diff_current', description: 'Capture + diff current page.', inputSchema: { type: 'object', properties: {} } },
   { name: 'verify_current', description: 'Re-diff current page after edits.', inputSchema: { type: 'object', properties: {} } },
   { name: 'mark_matched', description: 'Mark current page matched.', inputSchema: { type: 'object', properties: {} } },
+  { name: 'mark_has_issues', description: 'Mark current page as having known issues (note optional).', inputSchema: { type: 'object', properties: { note: { type: 'string' } } } },
   { name: 'skip_current', description: 'Skip current page with reason.', inputSchema: { type: 'object', properties: { reason: { type: 'string' } }, required: ['reason'] } },
   { name: 'status', description: 'Get progress summary.', inputSchema: { type: 'object', properties: {} } },
 ];

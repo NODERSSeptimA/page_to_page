@@ -2,7 +2,7 @@ import type { MigrationEngine } from '@noders/page-to-page-core';
 import { handleInit, InitInput } from './tools/init.js';
 import { handleNextPage, handleStatus, handleResume, ResumeInput } from './tools/navigation.js';
 import { handleDiffCurrent, handleVerifyCurrent } from './tools/diff.js';
-import { handleMarkMatched, handleSkipCurrent, SkipInput } from './tools/lifecycle.js';
+import { handleMarkMatched, handleMarkHasIssues, handleSkipCurrent, SkipInput, HasIssuesInput } from './tools/lifecycle.js';
 
 export interface TestServer {
   call(tool: string, args: unknown): Promise<any>;
@@ -35,8 +35,9 @@ export function createServer(): TestServer {
         case 'next_page':     return handleNextPage(await ensureEngine());
         case 'diff_current':  return handleDiffCurrent(await ensureEngine());
         case 'verify_current':return handleVerifyCurrent(await ensureEngine());
-        case 'mark_matched':  return handleMarkMatched(await ensureEngine());
-        case 'skip_current':  return handleSkipCurrent(await ensureEngine(), SkipInput.parse(args));
+        case 'mark_matched':   return handleMarkMatched(await ensureEngine());
+        case 'mark_has_issues': return handleMarkHasIssues(await ensureEngine(), HasIssuesInput.parse(args));
+        case 'skip_current':   return handleSkipCurrent(await ensureEngine(), SkipInput.parse(args));
         case 'status':        return handleStatus(await ensureEngine());
         default: throw new Error(`Unknown tool: ${tool}`);
       }
