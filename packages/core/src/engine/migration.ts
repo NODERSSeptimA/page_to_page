@@ -109,32 +109,41 @@ export class MigrationEngine {
   async verifyCurrent(): Promise<PixelDiffReport> { return this.diffCurrent(); }
 
   private async diffPath(pagePath: string): Promise<PixelDiffReport> {
-    const cap: CaptureResult = await this.capturer.capturePage({
-      originUrl: this.opts.originUrl, targetUrl: this.opts.targetUrl,
-      pagePath, viewports: this.opts.viewports,
-      maskSelectors: this.opts.maskSelectors, artifactsDir: this.opts.artifactsDir,
-    });
-    const entries: PixelDiffViewportEntry[] = [];
-    let issuesCount = 0;
-    for (const vr of cap.viewportResults) {
-      if (vr.originError || vr.targetError) {
-        issuesCount++;
-        entries.push({ viewport: vr.viewport, diffPercent: 1, originPath: vr.originPath, targetPath: vr.targetPath, diffPath: '' });
-        continue;
-      }
-      const diffPath = vr.originPath.replace(/origin\.png$/, 'diff.png');
-      const res = await pixelDiff(vr.originPath, vr.targetPath, diffPath);
-      if (res.diffPercent > ISSUE_THRESHOLD) issuesCount++;
-      entries.push({
-        viewport: vr.viewport, diffPercent: res.diffPercent,
-        originPath: vr.originPath, targetPath: vr.targetPath, diffPath,
+    try {
+      const cap: CaptureResult = await this.capturer.capturePage({
+        originUrl: this.opts.originUrl, targetUrl: this.opts.targetUrl,
+        pagePath, viewports: this.opts.viewports,
+        maskSelectors: this.opts.maskSelectors, artifactsDir: this.opts.artifactsDir,
       });
+      const entries: PixelDiffViewportEntry[] = [];
+      let issuesCount = 0;
+      for (const vr of cap.viewportResults) {
+        if (vr.originError || vr.targetError) {
+          issuesCount++;
+          entries.push({ viewport: vr.viewport, diffPercent: 1, originPath: vr.originPath, targetPath: vr.targetPath, diffPath: '' });
+          continue;
+        }
+        const diffPath = vr.originPath.replace(/origin\.png$/, 'diff.png');
+        const res = await pixelDiff(vr.originPath, vr.targetPath, diffPath);
+        if (res.diffPercent > ISSUE_THRESHOLD) issuesCount++;
+        entries.push({
+          viewport: vr.viewport, diffPercent: res.diffPercent,
+          originPath: vr.originPath, targetPath: vr.targetPath, diffPath,
+        });
+      }
+      const artifactsDir = join(this.opts.artifactsDir, slug(pagePath));
+      const report: PixelDiffReport = { pagePath, viewports: entries, totalIssues: issuesCount, artifactsDir };
+      writeFileSync(join(artifactsDir, 'report.json'), JSON.stringify(report, null, 2));
+      this.store.updatePage(pagePath, { lastRunAt: new Date().toISOString(), issuesCount });
+      return report;
+    } catch (err) {
+      this.store.updatePage(pagePath, {
+        status: 'error',
+        lastRunAt: new Date().toISOString(),
+      });
+      this.store.setCurrent(undefined);
+      throw err;
     }
-    const artifactsDir = join(this.opts.artifactsDir, slug(pagePath));
-    const report: PixelDiffReport = { pagePath, viewports: entries, totalIssues: issuesCount, artifactsDir };
-    writeFileSync(join(artifactsDir, 'report.json'), JSON.stringify(report, null, 2));
-    this.store.updatePage(pagePath, { lastRunAt: new Date().toISOString(), issuesCount });
-    return report;
   }
 
   markMatched(): void {
