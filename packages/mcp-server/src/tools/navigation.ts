@@ -24,5 +24,5 @@ export async function handleResume(
     maskSelectors: cfg.maskSelectors,
   });
   const s = engine.status();
-  return { engine, total: s.total, pending: s.pending, nextPath: engine.nextPage()?.path };
+  return { engine, total: s.total, pending: s.pending, nextPath: engine.peekNextPendingPath() };
 }

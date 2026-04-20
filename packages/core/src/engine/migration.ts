@@ -84,6 +84,10 @@ export class MigrationEngine {
     };
   }
 
+  peekNextPendingPath(): string | undefined {
+    return this.store.data().pages.find((p) => p.status === 'pending')?.path;
+  }
+
   nextPage(): Page | undefined {
     const pages = this.store.data().pages;
     const next = pages.find((p) => p.status === 'pending');

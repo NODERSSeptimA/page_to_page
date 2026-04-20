@@ -39,4 +39,62 @@ describe('MigrationEngine', () => {
       expect(matched).toBeGreaterThan(0);
     } finally { await r.close(); }
   }, 120_000);
+
+  it('resume does not advance cursor', async () => {
+    const workDir = mkdtempSync(join(tmpdir(), 'p2p-peek-'));
+    const stateFile = join(workDir, 'state.json');
+    const artifactsDir = join(workDir, 'artifacts');
+    const viewports = [{ name: 'desktop', width: 800, height: 600 }];
+
+    const e = await MigrationEngine.init({
+      originUrl: fx.originUrl, targetUrl: fx.targetUrl,
+      stateFile, artifactsDir, viewports,
+      concurrency: 2, maskSelectors: [], extraRoutes: [],
+    });
+    await e.close();
+
+    const resumed = await MigrationEngine.resume({
+      stateFile, artifactsDir, viewports,
+      concurrency: 2, maskSelectors: [],
+    });
+    try {
+      // Peek should not mutate
+      const peek1 = resumed.peekNextPendingPath();
+      const peek2 = resumed.peekNextPendingPath();
+      expect(peek1).toBeDefined();
+      expect(peek2).toEqual(peek1);
+      expect(resumed.status().inProgress).toBe(0);
+
+      // nextPage should return the same path
+      const actual = resumed.nextPage();
+      expect(actual?.path).toEqual(peek1);
+      expect(resumed.status().inProgress).toBe(1);
+    } finally { await resumed.close(); }
+  }, 120_000);
+
+  it('capture failure transitions page to error status', async () => {
+    const workDir = mkdtempSync(join(tmpdir(), 'p2p-err-'));
+    const stateFile = join(workDir, 'state.json');
+    const artifactsDir = join(workDir, 'artifacts');
+    // Use unreachable target URL to force a capture failure
+    const e = await MigrationEngine.init({
+      originUrl: fx.originUrl,
+      targetUrl: fx.originUrl, // valid so discovery works
+      stateFile, artifactsDir,
+      viewports: [{ name: 'desktop', width: 800, height: 600 }],
+      concurrency: 2, maskSelectors: [], extraRoutes: [],
+    });
+    try {
+      const np = e.nextPage();
+      expect(np).toBeDefined();
+      // Monkey-patch capturer to throw (cleanest way to force error path)
+      (e as unknown as { capturer: { capturePage: () => Promise<never> } }).capturer.capturePage =
+        async () => { throw new Error('simulated capture failure'); };
+      await expect(e.diffCurrent()).rejects.toThrow(/simulated capture failure/);
+      // After failure, page should be 'error', current cleared
+      expect(e.getPage(np!.path)?.status).toBe('error');
+      expect(e.currentPath()).toBeUndefined();
+      expect(e.status().error).toBe(1);
+    } finally { await e.close(); }
+  }, 60_000);
 });
