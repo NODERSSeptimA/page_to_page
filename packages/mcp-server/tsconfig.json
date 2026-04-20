@@ -3,5 +3,5 @@
   "compilerOptions": { "outDir": "./dist", "rootDir": "./src" },
   "references": [{ "path": "../core" }],
   "include": ["src/**/*.ts"],
-  "exclude": ["dist"]
+  "exclude": ["**/*.test.ts", "dist"]
 }

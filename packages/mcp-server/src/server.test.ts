@@ -1,0 +1,60 @@
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { startFixtures, type FixtureHandles } from '../../../test-fixtures/harness.js';
+import { createServer } from './server.js';
+
+describe('MCP tools', () => {
+  let fx: FixtureHandles; let work: string; let cfgPath: string;
+  beforeAll(async () => { fx = await startFixtures(); }, 30_000);
+  afterAll(async () => { await fx.stop(); });
+
+  beforeEach(() => {
+    work = mkdtempSync(join(tmpdir(), 'p2p-srv-'));
+    cfgPath = join(work, 'page-to-page.config.json');
+    writeFileSync(cfgPath, JSON.stringify({
+      originUrl: fx.originUrl, targetUrl: fx.targetUrl,
+      viewports: [{ name: 'desktop', width: 800, height: 600 }],
+      stateFile: join(work, 'state.json'),
+      artifactsDir: join(work, 'artifacts'),
+      concurrency: 2,
+    }));
+  });
+
+  it('init → next → diff → mark → status', async () => {
+    const srv = createServer();
+    try {
+      const init = await srv.call('init_migration', { configPath: cfgPath });
+      expect(init.discovered).toBeGreaterThan(0);
+      const next = await srv.call('next_page', {});
+      expect(next.path).toBeDefined();
+      const diff = await srv.call('diff_current', {});
+      expect(Array.isArray(diff.byViewport)).toBe(true);
+      const marked = await srv.call('mark_matched', {});
+      expect(marked.pagesRemaining).toBeGreaterThanOrEqual(0);
+      const status = await srv.call('status', {});
+      expect(status.total).toBeGreaterThan(0);
+    } finally { await srv.close(); }
+  }, 180_000);
+
+  it('resume returns state from disk', async () => {
+    const s1 = createServer();
+    await s1.call('init_migration', { configPath: cfgPath });
+    await s1.call('next_page', {});
+    await s1.close();
+    const s2 = createServer();
+    try {
+      const r = await s2.call('resume', { configPath: cfgPath });
+      expect(r.total).toBeGreaterThan(0);
+    } finally { await s2.close(); }
+  }, 60_000);
+
+  it('verify_current before next_page errors', async () => {
+    const srv = createServer();
+    try {
+      await srv.call('init_migration', { configPath: cfgPath });
+      await expect(srv.call('verify_current', {})).rejects.toThrow(/no page in progress/i);
+    } finally { await srv.close(); }
+  }, 30_000);
+});
