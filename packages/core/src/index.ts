@@ -9,3 +9,5 @@ export type { CaptureInput, CaptureResult, CaptureViewportResult } from './captu
 export { resolveViewports } from './capture/viewport.js';
 export { pixelDiff } from './diff/pixel.js';
 export type { PixelDiffResult } from './diff/pixel.js';
+export { MigrationEngine } from './engine/migration.js';
+export type { MigrationInit, MigrationResumeOpts, EngineStatus } from './engine/migration.js';
