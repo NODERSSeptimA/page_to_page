@@ -1,6 +1,8 @@
 {
-  "name": "test-fixtures",
-  "version": "0.1.0",
+  "name": "@noders/p2p-fixtures",
+  "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": { "express": "^4.21.0" },
+  "devDependencies": { "@types/express": "^5.0.0" }
 }
