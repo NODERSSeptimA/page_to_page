@@ -200,7 +200,7 @@ Mitigation: scroll-to-bottom, wait for `networkidle`, then scroll-to-top before 
 
 47 pages × 3 viewports × 2 sites = 282 captures per full pass. A 50-page site with 3 re-verifies per page ≈ 850 captures. Must be bounded in CPU/IO.
 
-Mitigation: concurrency cap of 4, configurable. Timing budget surfaced in `init_migration`.
+Mitigation: worker pool cap of 4, configurable via `config.concurrency` (default 4, valid range 1–8). Estimated total time surfaced in `init_migration` response so user can plan session length.
 
 ## 8. Testing strategy
 
@@ -218,7 +218,7 @@ Mitigation: concurrency cap of 4, configurable. Timing budget surfaced in `init_
   npm i -D @noders/page-to-page
   npx page-to-page init
   ```
-- `init` creates `page-to-page.config.json`, registers server in `.mcp.json`, appends `page-to-page-artifacts/` to `.gitignore`
+- `init` creates `page-to-page.config.json`, registers server in `.mcp.json`, and appends to `.gitignore`: `page-to-page-artifacts/` and `page-to-page.state.json.bak` (the primary `page-to-page.state.json` is committed as audit trail; the backup is local-only)
 
 ### 9.1 Monorepo layout
 
@@ -259,6 +259,6 @@ Rationale for monorepo with `core` extracted: insurance against a future form-fa
 2. For `text_content_hash` — exact match, or normalized (lowercase, collapsed whitespace)?
 3. What confidence threshold for region matching before falling back to pixel-only?
 4. Should `FixProposal` crops be individual PNGs on disk, or base64-embedded in MCP response? (Disk is cheaper for large sites; base64 is more ergonomic for Claude.)
-5. Should state file be committed to git by default, or gitignored? (Current design says committed as audit trail — worth confirming.)
+5. Should `FixProposal.suggested_search_terms` be derived from origin class names, text content, or tag context? (Affects how reliably Claude can grep Next.js source.)
 
 These get resolved in the writing-plans phase.
