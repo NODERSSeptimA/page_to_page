@@ -1,3 +1,5 @@
 export * from './types.js';
 export { loadConfig } from './config/load.js';
 export type { Config } from './config/schema.js';
+export { StateStore } from './state/store.js';
+export type { StateFile, StatePage } from './state/schema.js';
