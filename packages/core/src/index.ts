@@ -7,3 +7,5 @@ export { discoverPages, fetchSitemapPaths, crawlPaths } from './discovery/index.
 export { PageCapturer } from './capture/capturer.js';
 export type { CaptureInput, CaptureResult, CaptureViewportResult } from './capture/capturer.js';
 export { resolveViewports } from './capture/viewport.js';
+export { pixelDiff } from './diff/pixel.js';
+export type { PixelDiffResult } from './diff/pixel.js';
