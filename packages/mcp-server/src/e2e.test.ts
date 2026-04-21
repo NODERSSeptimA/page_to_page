@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { startFixtures, type FixtureHandles } from '../../../test-fixtures/harness.js';
@@ -44,6 +44,21 @@ describe('E2E: full migration loop', () => {
       expect(status.pending).toBe(0);
       expect(existsSync(join(work, 'state.json'))).toBe(true);
       expect(existsSync(join(work, 'artifacts'))).toBe(true);
+
+      // Verify fix proposals were generated for non-identical pages
+      const proposalsFiles: string[] = [];
+      for (const slug of ['root', 'about']) {
+        const p = join(work, 'artifacts', slug, 'fix-proposals.json');
+        if (existsSync(p)) proposalsFiles.push(p);
+      }
+      expect(proposalsFiles.length).toBeGreaterThanOrEqual(1);
+      for (const f of proposalsFiles) {
+        const arr = JSON.parse(readFileSync(f, 'utf-8'));
+        expect(Array.isArray(arr)).toBe(true);
+        for (const p of arr) {
+          expect(['style_mismatch', 'missing_block', 'unknown']).toContain(p.kind);
+        }
+      }
     } finally { await srv.close(); }
   }, 240_000);
 });

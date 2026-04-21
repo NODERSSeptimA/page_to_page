@@ -19,15 +19,16 @@ This creates:
 - `next_page()` — advance to next pending page
 - `diff_current()` — capture + pixel-diff across viewports
 - `verify_current()` — re-diff after edits
+- `get_fix_proposals()` — return structured `FixProposal[]` for current page (requires prior `diff_current()`)
 - `mark_matched()` — accept current page
 - `skip_current({reason})` — skip current with note
 - `status()` — progress summary
 
 ## Phase scope
 
-- **Phase 1 (this release):** pixel-diff, full MCP surface, state, discovery, bootstrap
-- **Phase 2:** DOM-style diff, FixProposal[] structured output
-- **Phase 3:** auth flow (autologin + headful fallback), real-site smoke
+- **Phase 1 (shipped):** pixel-diff, full MCP surface, state, discovery, bootstrap
+- **Phase 2 (shipped):** pixel-first DOM analysis — cluster extraction, `FixProposal[]` with `kind: 'style_mismatch' | 'missing_block' | 'unknown'`, offline elementAtPoint, style diff over whitelist
+- **Phase 3 (future):** auth flow (autologin + headful fallback), real-site smoke, iframe support, design-token awareness
 
 ## Development
 
