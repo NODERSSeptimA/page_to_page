@@ -3,7 +3,7 @@ import { handleInit, InitInput } from './tools/init.js';
 import { handleNextPage, handleStatus, handleResume, ResumeInput } from './tools/navigation.js';
 import { handleDiffCurrent, handleVerifyCurrent } from './tools/diff.js';
 import { handleMarkMatched, handleMarkHasIssues, handleSkipCurrent, SkipInput, HasIssuesInput } from './tools/lifecycle.js';
-import { handleGetFixProposals } from './tools/fix-proposals.js';
+import { handleGetFixProposals, GetFixProposalsInput } from './tools/fix-proposals.js';
 
 export interface TestServer {
   call(tool: string, args: unknown): Promise<any>;
@@ -40,7 +40,7 @@ export function createServer(): TestServer {
         case 'mark_has_issues': return handleMarkHasIssues(await ensureEngine(), HasIssuesInput.parse(args));
         case 'skip_current':   return handleSkipCurrent(await ensureEngine(), SkipInput.parse(args));
         case 'status':        return handleStatus(await ensureEngine());
-        case 'get_fix_proposals': return handleGetFixProposals(await ensureEngine());
+        case 'get_fix_proposals': return handleGetFixProposals(await ensureEngine(), GetFixProposalsInput.parse(args));
         default: throw new Error(`Unknown tool: ${tool}`);
       }
     },

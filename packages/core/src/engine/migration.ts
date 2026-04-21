@@ -102,10 +102,10 @@ export class MigrationEngine {
   getPage(path: string): Page | undefined { return this.store.getPage(path); }
   currentPath(): string | undefined { return this.store.data().current; }
 
-  proposalsPath(): string {
-    const current = this.currentPath();
-    if (!current) throw new Error('No page in progress. Call nextPage() first.');
-    return join(this.opts.artifactsDir, slug(current), 'fix-proposals.json');
+  proposalsPath(pagePath?: string): string {
+    const resolved = pagePath ?? this.currentPath();
+    if (!resolved) throw new Error('No page specified. Pass pagePath or call nextPage() first.');
+    return join(this.opts.artifactsDir, slug(resolved), 'fix-proposals.json');
   }
 
   async diffCurrent(): Promise<PixelDiffReport> {

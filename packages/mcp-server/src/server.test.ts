@@ -97,4 +97,19 @@ describe('MCP tools', () => {
         .rejects.toThrow(/no fix proposals|diff_current/i);
     } finally { await srv.close(); }
   }, 30_000);
+
+  it('get_fix_proposals accepts pagePath after mark_matched', async () => {
+    const srv = createServer();
+    try {
+      await srv.call('init_migration', { configPath: cfgPath });
+      const next = await srv.call('next_page', {});
+      expect(next.path).toBeDefined();
+      const pagePath = next.path;
+      await srv.call('diff_current', {});
+      await srv.call('mark_matched', {});
+      // After mark_matched, current is cleared. Explicit pagePath should still work.
+      const proposals = await srv.call('get_fix_proposals', { pagePath });
+      expect(Array.isArray(proposals)).toBe(true);
+    } finally { await srv.close(); }
+  }, 180_000);
 });
