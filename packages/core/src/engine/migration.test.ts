@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
-import { mkdtempSync, rmSync, existsSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { startFixtures, type FixtureHandles } from '../../../../test-fixtures/harness.js';
@@ -104,6 +104,42 @@ describe('MigrationEngine', () => {
       expect(e.currentPath()).toBeUndefined();
       expect(e.status().error).toBe(1);
     } finally { await e.close(); }
+  }, 60_000);
+
+  it('capture errors surface as report.analysisWarnings', async () => {
+    const workDir = mkdtempSync(join(tmpdir(), 'p2p-cap-warn-'));
+    const e = await MigrationEngine.init({
+      originUrl: fx.originUrl, targetUrl: fx.targetUrl,
+      stateFile: join(workDir, 'state.json'),
+      artifactsDir: join(workDir, 'artifacts'),
+      viewports: [{ name: 'desktop', width: 800, height: 600 }],
+      concurrency: 2, maskSelectors: [], extraRoutes: [],
+    });
+    try {
+      const np = e.nextPage();
+      expect(np).toBeDefined();
+      // Force capturer to return a result with originError populated — previously
+      // this was silently swallowed (diffPercent=1, no PNG artifacts, no warning).
+      (e as unknown as { capturer: { capturePage: (input: { pagePath: string; artifactsDir: string }) => Promise<unknown> } }).capturer.capturePage =
+        async (input) => {
+          const slug = input.pagePath === '/' ? 'root' : input.pagePath.replace(/^\//, '').replace(/\//g, '__');
+          const vpDir = join(input.artifactsDir, slug, 'desktop');
+          mkdirSync(vpDir, { recursive: true });
+          return {
+            pagePath: input.pagePath,
+            viewportResults: [{
+              viewport: 'desktop',
+              originPath: join(vpDir, 'origin.png'),
+              targetPath: join(vpDir, 'target.png'),
+              originError: 'networkidle timeout 30000ms',
+            }],
+          };
+        };
+      const report = await e.diffCurrent();
+      expect(report.analysisWarnings).toBeDefined();
+      expect(report.analysisWarnings!.some((w) => /origin capture failed/.test(w))).toBe(true);
+      expect(report.totalIssues).toBe(1);
+    } finally { await e.close(); rmSync(workDir, { recursive: true, force: true }); }
   }, 60_000);
 
   it('analysis errors surface as report.analysisWarnings', async () => {

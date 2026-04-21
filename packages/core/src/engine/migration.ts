@@ -125,9 +125,12 @@ export class MigrationEngine {
       });
       const entries: PixelDiffViewportEntry[] = [];
       let issuesCount = 0;
+      const analysisWarnings: string[] = [];
       for (const vr of cap.viewportResults) {
         if (vr.originError || vr.targetError) {
           issuesCount++;
+          if (vr.originError) analysisWarnings.push(`[${vr.viewport}] origin capture failed: ${vr.originError}`);
+          if (vr.targetError) analysisWarnings.push(`[${vr.viewport}] target capture failed: ${vr.targetError}`);
           entries.push({ viewport: vr.viewport, diffPercent: 1, originPath: vr.originPath, targetPath: vr.targetPath, diffPath: '' });
           continue;
         }
@@ -143,7 +146,6 @@ export class MigrationEngine {
       // Phase 2: cluster extraction + fix proposals, per viewport, aggregated across viewports
       const allClusters: Cluster[] = [];
       const allProposals: FixProposal[] = [];
-      const analysisWarnings: string[] = [];
       for (const vr of cap.viewportResults) {
         if (vr.originError || vr.targetError) continue;
         const diffPath = vr.originPath.replace(/origin\.png$/, 'diff.png');
