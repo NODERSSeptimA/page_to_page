@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import type { ViewportSpec } from '../types.js';
 import { STABILIZE_INIT_SCRIPT, stabilizeStyleTag } from './stabilize.js';
 import { buildMaskScript } from './mask.js';
+import { captureDomSnapshot } from './dom-snapshot.js';
 
 export interface CaptureInput {
   originUrl: string;
@@ -78,6 +79,21 @@ export class PageCapturer {
       await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => { /* best-effort */ });
       const png = await page.screenshot({ fullPage: true, type: 'png' });
       writeFileSync(opts.output, png);
+      // Capture DOM snapshot alongside screenshot (name inferred from filename: origin.png → origin.dom.json)
+      const domPath = opts.output.replace(/\.png$/, '.dom.json');
+      try {
+        const snap = await captureDomSnapshot(page, {
+          pagePath: new URL(opts.url).pathname,
+          viewport: opts.viewport.name,
+        });
+        writeFileSync(domPath, JSON.stringify(snap));
+      } catch (err) {
+        writeFileSync(domPath, JSON.stringify({
+          pagePath: new URL(opts.url).pathname, viewport: opts.viewport.name,
+          elements: [], capturedAt: new Date().toISOString(),
+          error: `DOM snapshot failed: ${(err as Error).message}`,
+        }));
+      }
       return undefined;
     } catch (err) { return (err as Error).message; }
     finally {

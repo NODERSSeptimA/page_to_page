@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { mkdtempSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { startFixtures, type FixtureHandles } from '../../../../test-fixtures/harness.js';
@@ -31,6 +31,27 @@ describe('PageCapturer', () => {
       expect(existsSync(v.targetPath)).toBe(true);
       expect(v.originError).toBeUndefined();
       expect(v.targetError).toBeUndefined();
+    } finally { await c.close(); }
+  }, 60_000);
+
+  it('writes dom.json next to each PNG', async () => {
+    const c = await PageCapturer.launch({ concurrency: 2 });
+    try {
+      const r = await c.capturePage({
+        originUrl: fx.originUrl,
+        targetUrl: fx.targetUrl,
+        pagePath: '/',
+        viewports: [{ name: 'desktop', width: 800, height: 600 }],
+        maskSelectors: [],
+        artifactsDir,
+      });
+      const v = r.viewportResults[0]!;
+      const originDomPath = v.originPath.replace(/origin\.png$/, 'origin.dom.json');
+      const targetDomPath = v.targetPath.replace(/target\.png$/, 'target.dom.json');
+      expect(existsSync(originDomPath)).toBe(true);
+      expect(existsSync(targetDomPath)).toBe(true);
+      const originDom = JSON.parse(readFileSync(originDomPath, 'utf-8'));
+      expect(originDom.elements.length).toBeGreaterThan(0);
     } finally { await c.close(); }
   }, 60_000);
 });
