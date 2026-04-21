@@ -1,18 +1,29 @@
 import { describe, it, expect } from 'vitest';
-import { buildMaskScript } from './mask.js';
+import { buildMaskCss } from './mask.js';
 
-describe('buildMaskScript', () => {
+describe('buildMaskCss', () => {
   it('empty returns empty string', () => {
-    expect(buildMaskScript([]).trim()).toBe('');
+    expect(buildMaskCss([]).trim()).toBe('');
   });
-  it('includes all selectors', () => {
-    const s = buildMaskScript(['.carousel', '[data-mask]']);
-    expect(s).toContain('.carousel');
-    expect(s).toContain('[data-mask]');
-    expect(s).toContain('background');
+
+  it('emits a host rule and a child rule for each selector', () => {
+    const css = buildMaskCss(['.carousel', '[data-mask]']);
+    expect(css).toContain('.carousel {');
+    expect(css).toContain('[data-mask] {');
+    expect(css).toContain('.carousel > *');
+    expect(css).toContain('[data-mask] > *');
   });
-  it('uses JSON.stringify to escape selectors (no backtick injection)', () => {
-    const s = buildMaskScript(['evil`injected`']);
-    expect(s).toContain('"evil`injected`"');
+
+  it('uses !important so page styles cannot override the mask', () => {
+    const css = buildMaskCss(['.x']);
+    expect(css).toContain('background: #cccccc !important');
+    expect(css).toContain('visibility: hidden !important');
+  });
+
+  it('emits one rule block per selector so a malformed selector only drops its own block', () => {
+    // Two rules per selector (host + child): 2 * 2 = 4 opening braces for 2 selectors.
+    const css = buildMaskCss(['.a', '.b']);
+    const openBraces = css.match(/\{/g)?.length ?? 0;
+    expect(openBraces).toBe(4);
   });
 });
