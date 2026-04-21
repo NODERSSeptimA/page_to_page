@@ -14,6 +14,10 @@ export interface CaptureInput {
   maskSelectors: ReadonlyArray<string>;
   artifactsDir: string;
   storageStatePath?: string;
+  /** networkidle wait ms after load. Default: 5000. Use 0 to skip. */
+  idleTimeoutMs?: number;
+  /** Wait for this CSS selector before screenshot. For SPAs whose data-driven content arrives after networkidle. */
+  waitForSelector?: string;
 }
 
 export interface CaptureViewportResult {
@@ -48,9 +52,16 @@ export class PageCapturer {
       mkdirSync(vpDir, { recursive: true });
       const originPath = join(vpDir, 'origin.png');
       const targetPath = join(vpDir, 'target.png');
+      const common = {
+        viewport: vp,
+        maskSelectors: input.maskSelectors,
+        storageStatePath: input.storageStatePath,
+        idleTimeoutMs: input.idleTimeoutMs,
+        waitForSelector: input.waitForSelector,
+      };
       const [oErr, tErr] = await Promise.all([
-        this.captureSite({ url: joinUrl(input.originUrl, input.pagePath), viewport: vp, output: originPath, maskSelectors: input.maskSelectors, storageStatePath: input.storageStatePath }),
-        this.captureSite({ url: joinUrl(input.targetUrl, input.pagePath), viewport: vp, output: targetPath, maskSelectors: input.maskSelectors, storageStatePath: input.storageStatePath }),
+        this.captureSite({ ...common, url: joinUrl(input.originUrl, input.pagePath), output: originPath }),
+        this.captureSite({ ...common, url: joinUrl(input.targetUrl, input.pagePath), output: targetPath }),
       ]);
       return { viewport: vp.name, originPath, targetPath, originError: oErr, targetError: tErr };
     });
@@ -61,7 +72,10 @@ export class PageCapturer {
   private async captureSite(opts: {
     url: string; viewport: ViewportSpec; output: string;
     maskSelectors: ReadonlyArray<string>; storageStatePath?: string;
+    idleTimeoutMs?: number;
+    waitForSelector?: string;
   }): Promise<string | undefined> {
+    const idleTimeoutMs = opts.idleTimeoutMs ?? 5_000;
     let ctx: BrowserContext | undefined; let page: PwPage | undefined;
     try {
       ctx = await this.browser.newContext({
@@ -76,7 +90,15 @@ export class PageCapturer {
       await page.addStyleTag({ content: stabilizeStyleTag() });
       const maskScript = buildMaskScript(opts.maskSelectors);
       if (maskScript) await page.evaluate(maskScript);
-      await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => { /* best-effort */ });
+      if (idleTimeoutMs > 0) {
+        await page.waitForLoadState('networkidle', { timeout: idleTimeoutMs }).catch(() => { /* best-effort */ });
+      }
+      if (opts.waitForSelector) {
+        // Selector timeout tracks idleTimeoutMs * 2 to give data-driven content room,
+        // capped at 30s to bound overall per-viewport time.
+        const selectorTimeoutMs = Math.min(Math.max(idleTimeoutMs * 2, 10_000), 30_000);
+        await page.waitForSelector(opts.waitForSelector, { timeout: selectorTimeoutMs, state: 'visible' });
+      }
       const png = await page.screenshot({ fullPage: true, type: 'png' });
       writeFileSync(opts.output, png);
       // Capture DOM snapshot alongside screenshot (name inferred from filename: origin.png → origin.dom.json)

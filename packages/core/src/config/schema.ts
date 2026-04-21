@@ -29,6 +29,10 @@ export const ConfigSchema = z.object({
   extraRoutes: z.array(z.string()).default([]),
   maskSelectors: z.array(z.string()).default([]),
   concurrency: z.number().int().min(1).max(8).default(4),
+  /** Max ms to wait for the page to reach networkidle after `load` before screenshot. */
+  captureIdleTimeoutMs: z.number().int().min(0).max(60_000).default(5_000),
+  /** Optional CSS selector to wait for before screenshot — use for SPAs whose content arrives after idle (e.g. data fetched via React Query). */
+  captureWaitForSelector: z.string().min(1).optional(),
   auth: AuthSchema.default({ enabled: false }),
   artifactsDir: z.string().default('./page-to-page-artifacts'),
   stateFile: z.string().default('./page-to-page.state.json'),
