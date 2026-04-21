@@ -77,7 +77,6 @@ export async function generateFixProposals(input: GenerateFixProposalsInput): Pr
     proposals.push(p);
   }
 
-  writeFileSync(join(input.artifactsDir, 'fix-proposals.json'), JSON.stringify(proposals, null, 2));
   return proposals;
 }
 
