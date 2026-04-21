@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { startFixtures, type FixtureHandles } from '../../../../test-fixtures/harness.js';
@@ -24,6 +24,13 @@ describe('MigrationEngine', () => {
       const np = e.nextPage(); expect(np).toBeDefined();
       const report = await e.diffCurrent();
       expect(report.viewports).toHaveLength(1);
+      // Phase 2 artifacts must exist
+      const slug = report.pagePath === '/' ? 'root' : report.pagePath.replace(/^\//, '').replace(/\//g, '__');
+      const vpDir = join(work, 'artifacts', slug, 'desktop');
+      expect(existsSync(join(vpDir, 'origin.dom.json'))).toBe(true);
+      expect(existsSync(join(vpDir, 'target.dom.json'))).toBe(true);
+      expect(existsSync(join(work, 'artifacts', slug, 'clusters.json'))).toBe(true);
+      expect(existsSync(join(work, 'artifacts', slug, 'fix-proposals.json'))).toBe(true);
       e.markMatched();
       expect(e.getPage(np!.path)?.status).toBe('matched');
     } finally { await e.close(); }

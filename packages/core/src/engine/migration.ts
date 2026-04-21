@@ -2,9 +2,11 @@ import { StateStore } from '../state/store.js';
 import { discoverPages } from '../discovery/index.js';
 import { PageCapturer, type CaptureResult } from '../capture/capturer.js';
 import { pixelDiff } from '../diff/pixel.js';
-import type { Page, ViewportSpec, PixelDiffReport, PixelDiffViewportEntry } from '../types.js';
+import type { Page, ViewportSpec, PixelDiffReport, PixelDiffViewportEntry, DomSnapshot, Cluster, FixProposal } from '../types.js';
 import { join } from 'node:path';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { extractClusters } from '../diff/clusters.js';
+import { generateFixProposals } from '../analysis/fix-proposals.js';
 
 const ISSUE_THRESHOLD = 0.001;
 
@@ -134,6 +136,39 @@ export class MigrationEngine {
       const artifactsDir = join(this.opts.artifactsDir, slug(pagePath));
       const report: PixelDiffReport = { pagePath, viewports: entries, totalIssues: issuesCount, artifactsDir };
       writeFileSync(join(artifactsDir, 'report.json'), JSON.stringify(report, null, 2));
+      // Phase 2: cluster extraction + fix proposals, per viewport, aggregated across viewports
+      const allClusters: Cluster[] = [];
+      const allProposals: FixProposal[] = [];
+      for (const vr of cap.viewportResults) {
+        if (vr.originError || vr.targetError) continue;
+        const diffPath = vr.originPath.replace(/origin\.png$/, 'diff.png');
+        const originDomPath = vr.originPath.replace(/origin\.png$/, 'origin.dom.json');
+        const targetDomPath = vr.targetPath.replace(/target\.png$/, 'target.dom.json');
+        const vpArtifactsDir = join(artifactsDir, vr.viewport);
+        try {
+          const diffBuf = readFileSync(diffPath);
+          const clusters = extractClusters(diffBuf);
+          allClusters.push(...clusters);
+          const originSnap = JSON.parse(readFileSync(originDomPath, 'utf-8')) as DomSnapshot;
+          const targetSnap = JSON.parse(readFileSync(targetDomPath, 'utf-8')) as DomSnapshot;
+          const proposals = await generateFixProposals({
+            viewport: vr.viewport,
+            originSnapshot: originSnap,
+            targetSnapshot: targetSnap,
+            clusters,
+            originPng: readFileSync(vr.originPath),
+            targetPng: readFileSync(vr.targetPath),
+            diffPng: diffBuf,
+            artifactsDir: vpArtifactsDir,
+          });
+          allProposals.push(...proposals);
+        } catch (analysisErr) {
+          // Log-only: analysis failure for one viewport doesn't block the whole diff flow
+          void analysisErr;
+        }
+      }
+      writeFileSync(join(artifactsDir, 'clusters.json'), JSON.stringify(allClusters, null, 2));
+      writeFileSync(join(artifactsDir, 'fix-proposals.json'), JSON.stringify(allProposals, null, 2));
       this.store.updatePage(pagePath, { lastRunAt: new Date().toISOString(), issuesCount });
       return report;
     } catch (err) {
