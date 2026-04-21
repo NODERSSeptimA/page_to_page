@@ -140,11 +140,10 @@ export class MigrationEngine {
         });
       }
       const artifactsDir = join(this.opts.artifactsDir, slug(pagePath));
-      const report: PixelDiffReport = { pagePath, viewports: entries, totalIssues: issuesCount, artifactsDir };
-      writeFileSync(join(artifactsDir, 'report.json'), JSON.stringify(report, null, 2));
       // Phase 2: cluster extraction + fix proposals, per viewport, aggregated across viewports
       const allClusters: Cluster[] = [];
       const allProposals: FixProposal[] = [];
+      const analysisWarnings: string[] = [];
       for (const vr of cap.viewportResults) {
         if (vr.originError || vr.targetError) continue;
         const diffPath = vr.originPath.replace(/origin\.png$/, 'diff.png');
@@ -169,12 +168,16 @@ export class MigrationEngine {
           });
           allProposals.push(...proposals);
         } catch (analysisErr) {
-          // Log-only: analysis failure for one viewport doesn't block the whole diff flow
-          void analysisErr;
+          analysisWarnings.push(`[${vr.viewport}] analysis failed: ${(analysisErr as Error).message}`);
         }
       }
       writeFileSync(join(artifactsDir, 'clusters.json'), JSON.stringify(allClusters, null, 2));
       writeFileSync(join(artifactsDir, 'fix-proposals.json'), JSON.stringify(allProposals, null, 2));
+      const report: PixelDiffReport = {
+        pagePath, viewports: entries, totalIssues: issuesCount, artifactsDir,
+        ...(analysisWarnings.length > 0 ? { analysisWarnings } : {}),
+      };
+      writeFileSync(join(artifactsDir, 'report.json'), JSON.stringify(report, null, 2));
       this.store.updatePage(pagePath, { lastRunAt: new Date().toISOString(), issuesCount });
       return report;
     } catch (err) {

@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { mkdtempSync, rmSync, existsSync } from 'node:fs';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import { mkdtempSync, rmSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { startFixtures, type FixtureHandles } from '../../../../test-fixtures/harness.js';
 import { MigrationEngine } from './migration.js';
+import * as fixProposalsModule from '../analysis/fix-proposals.js';
 
 describe('MigrationEngine', () => {
   let fx: FixtureHandles; let work: string;
@@ -104,4 +105,31 @@ describe('MigrationEngine', () => {
       expect(e.status().error).toBe(1);
     } finally { await e.close(); }
   }, 60_000);
+
+  it('analysis errors surface as report.analysisWarnings', async () => {
+    const workDir = mkdtempSync(join(tmpdir(), 'p2p-warn-'));
+    const e = await MigrationEngine.init({
+      originUrl: fx.originUrl, targetUrl: fx.targetUrl,
+      stateFile: join(workDir, 'state.json'),
+      artifactsDir: join(workDir, 'artifacts'),
+      viewports: [{ name: 'desktop', width: 800, height: 600 }],
+      concurrency: 2, maskSelectors: [], extraRoutes: [],
+    });
+    try {
+      e.nextPage();
+      // First diff: everything succeeds, no warnings
+      const report1 = await e.diffCurrent();
+      expect(report1.analysisWarnings).toBeUndefined();
+      // Force generateFixProposals to throw so the per-viewport catch fires
+      const spy = vi.spyOn(fixProposalsModule, 'generateFixProposals').mockRejectedValue(new Error('simulated analysis failure'));
+      try {
+        const report2 = await e.diffCurrent();
+        expect(report2.analysisWarnings).toBeDefined();
+        expect(report2.analysisWarnings!.length).toBeGreaterThan(0);
+        expect(report2.analysisWarnings![0]).toMatch(/analysis failed/);
+      } finally {
+        spy.mockRestore();
+      }
+    } finally { await e.close(); rmSync(workDir, { recursive: true, force: true }); }
+  }, 120_000);
 });

@@ -35,6 +35,7 @@ export interface PixelDiffReport {
   viewports: PixelDiffViewportEntry[];
   totalIssues: number;
   artifactsDir: string;
+  analysisWarnings?: string[];
 }
 
 // ── Phase 2 types ─────────────────────────────────────────────────────────────
