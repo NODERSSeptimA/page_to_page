@@ -3,6 +3,9 @@ dist/
 *.tsbuildinfo
 .DS_Store
 coverage/
+test-fixtures/**/*.js
+test-fixtures/**/*.d.ts
+test-fixtures/**/*.js.map
 page-to-page-artifacts/
 page-to-page.state.json.bak
 .env
