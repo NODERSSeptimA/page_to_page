@@ -34,6 +34,46 @@ describe('PageCapturer', () => {
     } finally { await c.close(); }
   }, 60_000);
 
+  it('waitForSelector blocks screenshot until data-driven content appears', async () => {
+    const c = await PageCapturer.launch({ concurrency: 2 });
+    try {
+      // Without waitForSelector and with idle wait disabled, capture races the 300ms
+      // setTimeout in /delayed fixture — screenshot happens before #ready exists.
+      const fastCapture = await c.capturePage({
+        originUrl: fx.originUrl, targetUrl: fx.targetUrl,
+        pagePath: '/delayed',
+        viewports: [{ name: 'desktop', width: 800, height: 600 }],
+        maskSelectors: [], artifactsDir,
+        idleTimeoutMs: 0,
+      });
+      const fastDomPath = fastCapture.viewportResults[0]!.originPath
+        .replace(/origin\.png$/, 'origin.dom.json');
+      const fastDom = JSON.parse(readFileSync(fastDomPath, 'utf-8'));
+      // The #ready element shouldn't exist yet — setTimeout hasn't fired.
+      const fastHasReady = fastDom.elements.some(
+        (el: { attrs: Record<string, string> }) => el.attrs.id === 'ready',
+      );
+      expect(fastHasReady).toBe(false);
+
+      // With waitForSelector, capture blocks until #ready appears.
+      const slowCapture = await c.capturePage({
+        originUrl: fx.originUrl, targetUrl: fx.targetUrl,
+        pagePath: '/delayed',
+        viewports: [{ name: 'desktop', width: 800, height: 600 }],
+        maskSelectors: [], artifactsDir,
+        idleTimeoutMs: 0,
+        waitForSelector: '#ready',
+      });
+      const slowDomPath = slowCapture.viewportResults[0]!.originPath
+        .replace(/origin\.png$/, 'origin.dom.json');
+      const slowDom = JSON.parse(readFileSync(slowDomPath, 'utf-8'));
+      const slowHasReady = slowDom.elements.some(
+        (el: { attrs: Record<string, string> }) => el.attrs.id === 'ready',
+      );
+      expect(slowHasReady).toBe(true);
+    } finally { await c.close(); }
+  }, 60_000);
+
   it('writes dom.json next to each PNG', async () => {
     const c = await PageCapturer.launch({ concurrency: 2 });
     try {

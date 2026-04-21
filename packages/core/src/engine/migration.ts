@@ -17,6 +17,10 @@ export interface MigrationInit {
   concurrency: number;
   maskSelectors: ReadonlyArray<string>;
   extraRoutes: ReadonlyArray<string>;
+  /** Override default 5s networkidle wait after load. Use 0 to skip. */
+  idleTimeoutMs?: number;
+  /** CSS selector to wait for before screenshot (SPA data-driven content). */
+  waitForSelector?: string;
 }
 
 export interface MigrationResumeOpts {
@@ -24,6 +28,8 @@ export interface MigrationResumeOpts {
   viewports: ReadonlyArray<ViewportSpec>;
   concurrency: number;
   maskSelectors: ReadonlyArray<string>;
+  idleTimeoutMs?: number;
+  waitForSelector?: string;
 }
 
 export interface EngineStatus {
@@ -43,6 +49,8 @@ export class MigrationEngine {
       artifactsDir: string;
       viewports: ReadonlyArray<ViewportSpec>;
       maskSelectors: ReadonlyArray<string>;
+      idleTimeoutMs?: number;
+      waitForSelector?: string;
     },
   ) {}
 
@@ -56,6 +64,7 @@ export class MigrationEngine {
       originUrl: input.originUrl, targetUrl: input.targetUrl,
       artifactsDir: input.artifactsDir,
       viewports: input.viewports, maskSelectors: input.maskSelectors,
+      idleTimeoutMs: input.idleTimeoutMs, waitForSelector: input.waitForSelector,
     });
   }
 
@@ -68,6 +77,7 @@ export class MigrationEngine {
       originUrl: data.originUrl, targetUrl: data.targetUrl,
       artifactsDir: opts.artifactsDir,
       viewports: opts.viewports, maskSelectors: opts.maskSelectors,
+      idleTimeoutMs: opts.idleTimeoutMs, waitForSelector: opts.waitForSelector,
     });
   }
 
@@ -122,6 +132,7 @@ export class MigrationEngine {
         originUrl: this.opts.originUrl, targetUrl: this.opts.targetUrl,
         pagePath, viewports: this.opts.viewports,
         maskSelectors: this.opts.maskSelectors, artifactsDir: this.opts.artifactsDir,
+        idleTimeoutMs: this.opts.idleTimeoutMs, waitForSelector: this.opts.waitForSelector,
       });
       const entries: PixelDiffViewportEntry[] = [];
       let issuesCount = 0;

@@ -22,6 +22,8 @@ export async function handleResume(
     stateFile: cfg.stateFile, artifactsDir: cfg.artifactsDir,
     viewports: cfg.viewports, concurrency: cfg.concurrency,
     maskSelectors: cfg.maskSelectors,
+    idleTimeoutMs: cfg.captureIdleTimeoutMs,
+    waitForSelector: cfg.captureWaitForSelector,
   });
   const s = engine.status();
   return { engine, total: s.total, pending: s.pending, nextPath: engine.peekNextPendingPath() };

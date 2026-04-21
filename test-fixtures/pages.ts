@@ -29,6 +29,23 @@ export const PAGES: FixturePage[] = [
     targetHtml: base('<h1>Same</h1>', 'h1{font-size:32px}'),
     expectDiff: false,
   },
+  {
+    // Page whose content arrives via setTimeout (simulates data-driven SPA).
+    // Used to exercise captureWaitForSelector: without it, a fast capture
+    // sees "Loading..."; with it, capture waits until #ready appears.
+    path: '/delayed',
+    originHtml: base(
+      '<h1 id="content">Loading...</h1>' +
+      '<script>setTimeout(() => { const h = document.getElementById("content"); h.textContent = "Ready"; h.id = "ready"; }, 1500);</script>',
+      'h1{font-size:32px}',
+    ),
+    targetHtml: base(
+      '<h1 id="content">Loading...</h1>' +
+      '<script>setTimeout(() => { const h = document.getElementById("content"); h.textContent = "Ready"; h.id = "ready"; }, 1500);</script>',
+      'h1{font-size:32px}',
+    ),
+    expectDiff: false,
+  },
 ];
 
 export function sitemapXml(origin: string): string {

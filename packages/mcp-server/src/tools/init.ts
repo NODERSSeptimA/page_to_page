@@ -18,6 +18,8 @@ export async function handleInit(input: z.infer<typeof InitInput>): Promise<{
     stateFile: cfg.stateFile, artifactsDir: cfg.artifactsDir,
     viewports: cfg.viewports, concurrency: cfg.concurrency,
     maskSelectors: cfg.maskSelectors, extraRoutes: cfg.extraRoutes,
+    idleTimeoutMs: cfg.captureIdleTimeoutMs,
+    waitForSelector: cfg.captureWaitForSelector,
   });
   const discovered = engine.status().total;
   const estimatedSeconds = discovered * cfg.viewports.length * 3;
