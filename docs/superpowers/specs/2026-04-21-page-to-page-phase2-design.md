@@ -90,7 +90,7 @@ Five new modules under `packages/core/src/`. Each has one responsibility, ≤300
 - For each element in the document: `{tag, text (textContent truncated to 200 chars), attrs, bbox, computedStyles, parentIndex}`
 - `attrs` includes: `id`, `class`, `role`, `aria-label`, `aria-labelledby`, `alt`, `title`, `name`, `data-testid`
 - `computedStyles` is a whitelist of ~40 properties (see §5.4)
-- Result stored as `DomSnapshot = { pagePath, viewport, elements: Element[], capturedAt, truncated?: true }`
+- Result stored as `DomSnapshot = { pagePath, viewport, elements: Element[], capturedAt, truncated?: true, error?: string }` — `error` populated when capture failed partway and `elements` may be empty
 - **Soft cap**: 15000 elements. When hit, returns partial snapshot with `truncated: true` flag.
 - Integrated into `PageCapturer.captureSite()` immediately after screenshot; writes `<side>.dom.json` adjacent to PNG.
 
@@ -136,10 +136,10 @@ The orchestrator. Pure function over on-disk artifacts.
    - 4 corners of bbox (clamped inside)
    - geometric center of bbox
 2. Call `ElementAtPoint(originSnapshot, p)` and `ElementAtPoint(targetSnapshot, p)` for each of 6 points
-3. Majority vote on each side → `originElement`, `targetElement` (one per side, or `undefined`)
+3. Majority vote on each side → `originElement`, `targetElement` (one per side, or `undefined`). Tiebreak when no majority: pick the element appearing at the centroid point. If still tied, pick the element with the smallest bbox area (most specific).
 4. **Classify `kind`**:
    - If both elements are `undefined` → `kind: 'unknown'`
-   - If one element is `undefined`, OR one has bbox area > 50% viewport area, OR one element's tag is `html`/`body` while the other is a real element → `kind: 'missing_block'` with `side` indicating which side *has* the real element
+   - If one element is `undefined`, OR one has bbox area > 50% viewport area while the other does not, OR one element's tag is `html`/`body` while the other has a different tag → `kind: 'missing_block'` with `side` indicating which side *has* the real (non-root, non-oversized) element
    - Otherwise → `kind: 'style_mismatch'`, run `StyleComparator` on the pair
 5. **Crop**: extract bbox region from `origin.png` and `target.png` (clamped to image bounds) → write to `crops/issue-<id>-origin.png` and `crops/issue-<id>-target.png`
 6. **Extract `suggestedSearchTerms`** (for `style_mismatch` / `missing_block`):
