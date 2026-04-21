@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { ViewportSpec } from '../types.js';
 import { STABILIZE_INIT_SCRIPT, stabilizeStyleTag } from './stabilize.js';
-import { buildMaskScript } from './mask.js';
+import { buildMaskCss } from './mask.js';
 import { captureDomSnapshot } from './dom-snapshot.js';
 
 export interface CaptureInput {
@@ -88,8 +88,8 @@ export class PageCapturer {
       if (!response) return 'no response';
       if (response.status() >= 400) return `HTTP ${response.status()}`;
       await page.addStyleTag({ content: stabilizeStyleTag() });
-      const maskScript = buildMaskScript(opts.maskSelectors);
-      if (maskScript) await page.evaluate(maskScript);
+      const maskCss = buildMaskCss(opts.maskSelectors);
+      if (maskCss) await page.addStyleTag({ content: maskCss });
       if (idleTimeoutMs > 0) {
         await page.waitForLoadState('networkidle', { timeout: idleTimeoutMs }).catch(() => { /* best-effort */ });
       }

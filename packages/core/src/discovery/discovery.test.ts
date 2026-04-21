@@ -9,7 +9,7 @@ describe('discovery', () => {
 
   it('fetchSitemapPaths returns sitemap paths', async () => {
     const paths = (await fetchSitemapPaths(fx.originUrl)).sort();
-    expect(paths).toEqual(['/', '/about', '/delayed', '/identical']);
+    expect(paths).toEqual(['/', '/about', '/delayed', '/identical', '/rerender']);
   });
 
   it('crawlPaths walks links with depth limit', async () => {
