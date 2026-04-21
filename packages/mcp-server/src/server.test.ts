@@ -71,4 +71,30 @@ describe('MCP tools', () => {
       expect(st.hasIssues).toBe(1);
     } finally { await srv.close(); }
   }, 180_000);
+
+  it('get_fix_proposals returns FixProposal[] after diff', async () => {
+    const srv = createServer();
+    try {
+      await srv.call('init_migration', { configPath: cfgPath });
+      await srv.call('next_page', {});
+      await srv.call('diff_current', {});
+      const proposals = await srv.call('get_fix_proposals', {});
+      expect(Array.isArray(proposals)).toBe(true);
+      for (const p of proposals) {
+        expect(['style_mismatch', 'missing_block', 'unknown']).toContain(p.kind);
+        expect(p.clusterId).toBeDefined();
+        expect(p.bbox).toBeDefined();
+      }
+    } finally { await srv.close(); }
+  }, 180_000);
+
+  it('get_fix_proposals without diff_current errors', async () => {
+    const srv = createServer();
+    try {
+      await srv.call('init_migration', { configPath: cfgPath });
+      await srv.call('next_page', {});
+      await expect(srv.call('get_fix_proposals', {}))
+        .rejects.toThrow(/no fix proposals|diff_current/i);
+    } finally { await srv.close(); }
+  }, 30_000);
 });

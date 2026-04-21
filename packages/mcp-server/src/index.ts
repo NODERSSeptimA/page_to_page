@@ -13,6 +13,7 @@ const TOOLS = [
   { name: 'mark_has_issues', description: 'Mark current page as having known issues (note optional).', inputSchema: { type: 'object', properties: { note: { type: 'string' } } } },
   { name: 'skip_current', description: 'Skip current page with reason.', inputSchema: { type: 'object', properties: { reason: { type: 'string' } }, required: ['reason'] } },
   { name: 'status', description: 'Get progress summary.', inputSchema: { type: 'object', properties: {} } },
+  { name: 'get_fix_proposals', description: 'Return structured FixProposal[] for current page (requires prior diff_current).', inputSchema: { type: 'object', properties: {} } },
 ];
 
 async function main(): Promise<void> {
