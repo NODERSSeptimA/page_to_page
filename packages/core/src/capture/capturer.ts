@@ -70,7 +70,7 @@ export class PageCapturer {
       });
       await ctx.addInitScript(STABILIZE_INIT_SCRIPT);
       page = await ctx.newPage();
-      const response = await page.goto(opts.url, { waitUntil: 'networkidle', timeout: 30_000 });
+      const response = await page.goto(opts.url, { waitUntil: 'load', timeout: 30_000 });
       if (!response) return 'no response';
       if (response.status() >= 400) return `HTTP ${response.status()}`;
       await page.addStyleTag({ content: stabilizeStyleTag() });
